@@ -6,7 +6,10 @@ public class Game2048 extends Game {
 
   private static final int SIDE = 4;
   private int[][] gameField = new int[SIDE][SIDE];
+  private boolean isGameStopped = false;
+  private int score = 0;
 
+  @Override
   public void initialize() {
     setScreenSize(SIDE, SIDE);
     createGame();
@@ -14,8 +17,10 @@ public class Game2048 extends Game {
   }
 
   private void createGame() {
+    gameField = new int[SIDE][SIDE];
     createNewNumber();
     createNewNumber();
+
   }
 
   private void drawScene() {
@@ -27,6 +32,9 @@ public class Game2048 extends Game {
   }
 
   private void createNewNumber() {
+    if (getMaxTileValue() == 2048) {
+      win();
+    }
 
     int x = getRandomNumber(SIDE);
     int y = getRandomNumber(SIDE);
@@ -92,9 +100,10 @@ public class Game2048 extends Game {
   private boolean compressRow(int[] row) {
 
     boolean moved = false;
-    int max = row.length;
-    int i, j;
-    for (i = 0, j = 0; j < max; j++) {
+    int i;
+    int j;
+
+    for (i = 0, j = 0; j < row.length; j++) {
       if (row[j] != 0) {
         if (i < j) {
           int tmp = row[i];
@@ -114,22 +123,140 @@ public class Game2048 extends Game {
       if (row[i] == row[i + 1] && row[i] != 0) {
         row[i] += row[i + 1];
         row[i + 1] = 0;
+        score += row[i];
+        setScore(score);
         merged = true;
       }
     }
     return merged;
   }
 
-  private void onKeyPress(Key key) {
-    if (key == Key.LEFT) {
+  @Override
+  public void onKeyPress(Key key) {
+    if (!canUserMove()) {
+      gameOver();
+    } else {
+      if (isGameStopped && key == Key.SPACE) {
+        isGameStopped = false;
+        score = 0;
+        setScore(score);
+        createGame();
+        drawScene();
+      } else if (!isGameStopped && key == Key.LEFT) {
+        moveLeft();
+        drawScene();
+      } else if (!isGameStopped && key == Key.RIGHT) {
+        moveRight();
+        drawScene();
+      } else if (!isGameStopped && key == Key.UP) {
+        moveUp();
+        drawScene();
+      } else if (!isGameStopped && key == Key.DOWN) {
+        moveDown();
+        drawScene();
+      }
+    }
+  }
 
-    } else if (key == Key.RIGHT) {
+  private void moveLeft() {
 
-    } else if (key == Key.UP) {
+    boolean changed = false;
 
-    } else if (key == Key.DOWN) {
+    for (int[] row : gameField) {
+
+      boolean compressed = compressRow(row);
+      boolean merged = mergeRow(row);
+      compressRow(row);
+
+      if ((compressed || merged) && !changed) {
+        createNewNumber();
+        changed = true;
+      }
 
     }
+  }
+
+  private void moveRight() {
+    rotateClockwise();
+    rotateClockwise();
+    moveLeft();
+    rotateClockwise();
+    rotateClockwise();
+
+  }
+
+  private void moveUp() {
+    rotateClockwise();
+    rotateClockwise();
+    rotateClockwise();
+    moveLeft();
+    rotateClockwise();
+  }
+
+  private void moveDown() {
+    rotateClockwise();
+    moveLeft();
+    rotateClockwise();
+    rotateClockwise();
+    rotateClockwise();
+  }
+
+  private void rotateClockwise() {
+    // 90 deg
+    int[][] temp = new int[SIDE][SIDE];
+
+    for (int i = 0; i < gameField.length; ++i) { // loop through row
+      for (int j = 0; j < gameField.length; ++j) { // loop through column
+        temp[i][j] = gameField[gameField.length - j - 1][i];
+      }
+    }
+    gameField = temp;
+
+  }
+
+  private int getMaxTileValue() {
+    int max = 0;
+    for (int i = 0; i < gameField.length; ++i) { // loop through row
+      for (int j = 0; j < gameField.length; ++j) { // loop through column
+        if (max < gameField[i][j]) {
+          max = gameField[i][j];
+        }
+
+      }
+    }
+    return max;
+  }
+
+  private void win() {
+    isGameStopped = true;
+    showMessageDialog(Color.DEEPPINK, "You win!", Color.ANTIQUEWHITE, 20);
+  }
+
+  private void gameOver() {
+    isGameStopped = true;
+    showMessageDialog(Color.DEEPPINK, "You lose!", Color.ANTIQUEWHITE, 20);
+  }
+
+  private boolean canUserMove() {
+
+    for (int i = 0; i < gameField.length; ++i) { // loop through row
+      for (int j = 0; j < gameField.length; ++j) { // loop through column
+
+        if (gameField[i][j] == 0) {
+          return true;
+        }
+
+        if ((i + 1) < SIDE && (gameField[i][j] == gameField[i + 1][j])) {
+          return true;
+        }
+
+        if ((j + 1) < SIDE && (gameField[i][j] == gameField[i][j + 1])) {
+          return true;
+        }
+
+      }
+    }
+    return false;
   }
 
 }
